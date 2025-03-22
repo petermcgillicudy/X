@@ -1,20 +1,24 @@
 # X: A Non-Modal Editor for the Terminal
 
-X is a non-modal editor for the terminal that can be used by everybody, even those few who don't know Lisp. Everything works as in regular visual editors.
+X is a non-modal editor for the terminal that can be used by everybody, even those few who don't know Lisp. It works just like any other visual editor you might know.
 
 ## What Does X Mean?
 
-x is called x because x > vi. It's not much of a reason, but it’s technically correct and that’s good enough for me.
+X is called `x` because `x > vi`. It's not much of a reason, but it’s technically correct and that’s good enough for me.
 
-If you try `x` and you like it, you could go to wherever `vi` is installed and install `x` there. It’s a convenient place and... well, you can call it using one less character. That's something.
+If you give `x` a try and end up liking it, feel free to install it where `vi` is typically found. It's a handy spot, and hey, you save one character when typing the command. That counts for something.
 
-One\* could suggest that once you are there, you can proclaim proudly:
+Some[^1] might suggest that once you've done this, you can proudly declare:
 
 `echo x > vi`
 
-That will show that you care about math and what is good and just.
+This shows your commitment to simplicity and fairness—mathematically speaking!
 
-#Why X?
-X is simple, fast, and convenient. Also, we don’t want Elon Musk to buy a text editor for 1 trillion dollars and rename it x, right?
+##Why Choose X?
+* Simple: It’s easy to use.
+* Fast: It runs smoothly without any fuss.
+* Convenient: You don’t have to type vi anymore!
+* And, most importantly, we want to avoid the scenario where Elon Musk buys a text editor for 1 trillion dollars and renames it to x. That would be absurd!
+  
+[^1]Not me—just covering my legal bases.
 
-*Not me, for legal reasons.
