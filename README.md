@@ -19,6 +19,9 @@ This shows your commitment to simplicity and fairness—mathematically speaking!
 * Fast: It runs smoothly without any fuss.
 * Convenient: You don’t have to type vi anymore!
 * And, most importantly, we want to avoid the scenario where Elon Musk buys a text editor for 1 trillion dollars and renames it to x. That would be absurd!
+
+## Manual
+ctrl-Q exits the program. ctrl-S saves the current document, ctrl-Y is "redo". The rest is the same as in any other visual editor. 
   
 *Not me—just covering my legal bases.
 
