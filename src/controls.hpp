@@ -44,6 +44,12 @@ public:
         }
     }
 
+    void fix() {
+        if (m_start > m_end) {
+            std::swap(m_start, m_end);
+        }
+    }
+
     void update(size_t start, size_t end) {
         m_start = start;
         m_end = end;
@@ -712,6 +718,8 @@ private:
     Color m_selectionFg;     // Foreground color for selected text
     Color m_selectionBg;     // Background color for selected text
 
+    std::string m_clipboard;  // Store clipboard contents
+
     std::string m_fileName;  // Associated file name (can be empty)
 
     size_t m_preferredX = 0;  // Add this member variable
@@ -947,6 +955,54 @@ private:
         ensureCursorVisible();
     }
     
+    void copyToClipboard() {
+        if (hasSelection()) {
+            // First sync any changes from EditBox
+            updateFromEditBox();
+
+            m_clipboard = getSelectedText();
+        }
+    }
+    
+    // Cut selected text to clipboard
+    void cutToClipboard() {
+        if (hasSelection()) {
+            // First sync any changes from EditBox
+            updateFromEditBox();
+
+
+            // First copy to clipboard
+            m_clipboard = getSelectedText();
+            
+            // Then delete the selection (this is already undoable)
+            deleteSelection();
+            updateEditBoxFromCurrentLine();
+        }
+    }
+    
+    // Paste clipboard contents at current position
+    void pasteFromClipboard() {
+        if (!m_clipboard.empty()) {
+            // First sync any changes from EditBox
+            updateFromEditBox();
+            
+            // Calculate flat position for insertion
+            size_t flatPos = linePosToFlatPos(m_cursorY, m_cursorX);
+            
+            // Create undoable action for paste
+            insertText(flatPos, m_clipboard);
+            updateEditBoxFromCurrentLine();
+
+            // Update cursor position after paste
+            size_t line, pos;
+            flatPosToLinePos(flatPos + m_clipboard.length(), line, pos);
+            setCursorPos(pos, line);
+        }
+    }
+
+
+
+
     // Get text at the specified position
     std::string getTextAt(size_t pos, size_t length) const override {
         std::string result;
@@ -1095,6 +1151,27 @@ public:
     
     bool processEvent(const SGREvent& ev) override {
         // Check if this is a selection-related event
+
+        // First let the status bar process the event if it exists
+        if (m_statusBar && m_statusBar->processEvent(ev)) {
+            return true;
+        }
+
+
+        if (!ev.isMouseEvent && ev.ctrl) {
+            if (ev.key == 'c' || ev.key == 'C') {
+                copyToClipboard();
+                return true;
+            }
+            if (ev.key == 'x' || ev.key == 'X') {
+                cutToClipboard();
+                return true;
+            }
+            if (ev.key == 'v' || ev.key == 'V') {
+                pasteFromClipboard();
+                return true;
+            }
+        }
        
         bool forceUpdate = false;
         
@@ -1107,14 +1184,12 @@ public:
                 startSelection();
             }
         }
-        // First let the status bar process the event if it exists
-        if (m_statusBar && m_statusBar->processEvent(ev)) {
-            return true;
-        }
 
-        m_editBox->setFocus(m_hasFocus);
+
 
         if (!m_hasFocus) return false;
+
+        m_editBox->setFocus(true);
         
         // Let the EditBox process the event first
         handled = m_editBox->processEvent(ev);
@@ -1155,6 +1230,10 @@ public:
             updateEditBoxFromCurrentLine();  // Sync EditBox after redo
             return true;
         }
+        // Handle clipboard operations
+    
+        
+        
         
         // Handle save keyboard shortcut
         if (ev.ctrl && ev.key == 's') {  // Ctrl+S for save
@@ -1274,16 +1353,8 @@ public:
             }
         }
         
-        // // Send events to EditBox if it exists and is at cursor line
-        // if (m_editBox && m_cursorY < m_lines.size()) {
-        //     if (m_editBox->processEvent(ev)) {
-        //         // EditBox handled the event - update line content
-        //         // m_lines[m_cursorY] = m_editBox->getText();
-        //         return true;
-        //     }
-        // }
-
-
+        
+        
         return false;
     }
     
@@ -1489,24 +1560,30 @@ public:
             return "";
         }
         
-        return getTextAt(m_selection->getStart(), 
-                        m_selection->getEnd() - m_selection->getStart());
+        int start = m_selection->getStart();
+        int end = m_selection->getEnd();
+        if (start > end)  std::swap(start, end);
+        
+        return getTextAt(start, end - start);
     }
     
     // Delete selected text
     void deleteSelection() {
         if (m_selection) {
-            size_t start = m_selection->getStart();
+            ((RangeSelection*)m_selection)->fix();
+            size_t start  = m_selection->getStart();
             size_t length = m_selection->getEnd() - start;
             
             // Delete the text
             deleteText(start, length);
-            
+          
             // Move cursor to the start of the selection
             size_t line, linePos;
             flatPosToLinePos(start, line, linePos);
             setCursorPos(linePos, line);
             
+            
+
             // Clear the selection
             clearSelection();
         }

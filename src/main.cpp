@@ -77,21 +77,46 @@ int main(int argc, char* argv[]) {
     
     editor.setFocus(true);
 
+    bool queryExit = false;
     char buf[64];
+    
     while (true) {
         terminal.clear();
         editor.draw(terminal);
+        
+        // If in query mode, show the exit message
+        if (queryExit) {
+            std::string message = "Do you really want to exit without saving? (y)es or (n)o?";
+            terminal.putString(0, terminal.getHeight() - 1, message.c_str(), 
+                             term::White, term::Red);
+        }
+        
         terminal.refresh();
         
         ssize_t n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
         if (n > 0) {
             term::SGREvent ev = term::Terminal::parseSGREvent(buf);
-            if (buf[0] == 3) break;  // Ctrl-C to exit
-            editor.processEvent(ev);
+            
+            if (queryExit) {
+                // Only process y/n in query mode
+                if (!ev.isSpecial && (ev.key == 'y' || ev.key == 'Y')) {
+                    break;  // Exit program
+                }
+                if (!ev.isSpecial && (ev.key == 'n' || ev.key == 'N')) {
+                    queryExit = false;  // Cancel exit
+                }
+            } else {
+                // Normal mode
+                if (ev.ctrl && (ev.key == 'q' || ev.key == 'Q')) {
+                    queryExit = true;  // Enter query mode
+                } else {
+                    editor.processEvent(ev);
+                }
+            }
         }
         
         usleep(10000);  // Sleep 10ms
     }
-
+    
     return 0;
 }
