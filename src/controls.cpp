@@ -62,6 +62,11 @@ void EditBox::setCursorPos(size_t newPos) {
     }
     
     m_cursorPos = newPos;
+
+    // Notify parent Editor about cursor change
+    if (m_parentEditor) {
+        m_parentEditor->setCursorPos(m_cursorPos, m_parentEditor->m_cursorY);
+    }
     
     // Adjust scroll position if needed
     if (m_cursorPos < m_leftIndex) {
@@ -79,7 +84,7 @@ bool EditBox::processEvent(const SGREvent& ev) {
     if (!ev.isMouseEvent) {
         if (ev.isSpecial) {
             // Handle special keys
-            if (ev.keyCode == KeyCode::Left) {  // Left arrow
+            if (ev.keyCode == KeyCode::Left && !ev.ctrl) {  // Left arrow
                 if (m_cursorPos > 0) {
                     
                     setCursorPos(m_cursorPos - 1);
@@ -89,7 +94,7 @@ bool EditBox::processEvent(const SGREvent& ev) {
                 }
                 return true;
             }
-            if (ev.keyCode == KeyCode::Right) {  // Right arrow
+            if (ev.keyCode == KeyCode::Right && !ev.ctrl) {  // Right arrow
                 if (m_cursorPos < m_text.length()) {
                     setCursorPos(m_cursorPos + 1);
                 } else {
@@ -98,7 +103,9 @@ bool EditBox::processEvent(const SGREvent& ev) {
                 }
                 return true;
             }
-            if (ev.keyCode == KeyCode::Delete) {  // Delete
+            if (ev.keyCode == KeyCode::Delete && !ev.ctrl) {  // Delete
+                if (deleteParentSelectedText())  return true;
+
                 if (m_cursorPos < m_text.length()) {
                     // Normal delete within the line
                     deleteText(m_cursorPos, 1);
@@ -126,7 +133,7 @@ bool EditBox::processEvent(const SGREvent& ev) {
                         return true;
                     }
                 }
-            }            
+            } 
             if (ev.keyCode == KeyCode::Home && !ev.ctrl) {  // Home
                 setCursorPos(0);
                 return true;
@@ -147,7 +154,9 @@ bool EditBox::processEvent(const SGREvent& ev) {
                 
                 // If we have a parent editor, let it handle the newline
                 if (m_parentEditor) {
-                                        // Calculate the flat position for the cursor
+                    m_parentEditor->updateFromEditBox();
+                    
+                    // Calculate the flat position for the cursor
                     size_t flatPos = m_parentEditor->linePosToFlatPos(m_parentEditor->getCursorY(), m_cursorPos);
                     
                     // Insert a newline character at the cursor position using the undoable action
@@ -173,7 +182,7 @@ bool EditBox::processEvent(const SGREvent& ev) {
                 redo();
                 return true;
             }
-            if (ev.keyCode == KeyCode::Backspace) {  // Backspace
+            if (ev.keyCode == KeyCode::Backspace && !ev.ctrl) {  // Backspace
                 // Delete selection if exists
                 if (deleteParentSelectedText()) {
                     return true;
@@ -187,6 +196,18 @@ bool EditBox::processEvent(const SGREvent& ev) {
                     return handleBoundary(true, true);
                 }
                 return true;
+            }
+            else if (ev.keyCode == KeyCode::Backspace && ev.ctrl) {
+                deleteParentSelectedText();
+                if (m_cursorPos > 0) {
+                    size_t wordStart = findPrevWordStart(m_text, m_cursorPos);
+                    if (wordStart < m_cursorPos) {
+                        // Replace direct text modification with deleteText
+                        deleteText(wordStart, m_cursorPos - wordStart);
+                        return true;
+                    }
+                }
+                
             }
             else if (ev.keyCode == KeyCode::Tab) {  // Tab
                 deleteParentSelectedText();
@@ -311,7 +332,7 @@ void Editor::updateFromEditBox() {
                 
             case DiffOpType::REPLACE:
                 replaceText(linePosToFlatPos(m_cursorY, diff.position), 
-                           diff.oldText.length(), diff.newText);
+                            diff.oldText.length(), diff.newText);
                 break;
                 
             case DiffOpType::NONE:
@@ -373,6 +394,25 @@ bool EditBox::handleBoundary(bool isAtStart, bool isDelete) {
 }
 
 bool Editor::handleEditBoxBoundary(bool isAtStart, bool isDelete) {
+    if (!isDelete) {
+        if (isAtStart) {
+            // Left at start of line
+            if (m_cursorY > 0) {
+                updateFromEditBox();  // First sync any changes from EditBox
+                setCursorPos(m_lines[m_cursorY - 1].length(), m_cursorY - 1);  
+                updateEditBoxFromCurrentLine();
+                return true;
+            }
+        } else {
+            // Right at end of line
+            if (m_cursorY < m_lines.size() - 1) {
+                updateFromEditBox();  // First sync any changes from EditBox
+                setCursorPos(0, m_cursorY + 1);  
+                updateEditBoxFromCurrentLine();
+                return true;
+            }
+        }
+    }
     if (isDelete) {
         if (!isAtStart) {
             // Delete at end of line - join with next line
@@ -418,27 +458,6 @@ bool Editor::handleEditBoxBoundary(bool isAtStart, bool isDelete) {
                 positionEditBox();
                 // updateEditBoxFromCurrentLine();
                 
-                return true;
-            }
-        }
-    } else {
-        // Navigation (not deletion)
-        if (isAtStart) {
-            // Left at start of line
-            if (m_cursorY > 0) {
-                m_cursorY--;
-                m_cursorX = m_lines[m_cursorY].length();
-                ensureCursorVisible();
-                updateCursorInfo();
-                return true;
-            }
-        } else {
-            // Right at end of line
-            if (m_cursorY < m_lines.size() - 1) {
-                m_cursorY++;
-                m_cursorX = 0;
-                ensureCursorVisible();
-                updateCursorInfo();
                 return true;
             }
         }

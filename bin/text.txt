@@ -716,8 +716,6 @@ private:
 
     size_t m_preferredX = 0;  // Add this member variable
 
-    int m_numLinesWheelScroll = 3;  // Default value
-
     Color getSelectionFg() const { return m_selectionFg; }
     Color getSelectionBg() const { return m_selectionBg; }
 
@@ -1252,10 +1250,10 @@ public:
         // Handle mouse wheel events
         if (ev.isMouseEvent && (ev.button == ButtonPressed::WheelUp || ev.button == ButtonPressed::WheelDown)) {
             // First, update from EditBox if needed
-            // if (m_editBoxChanged) {
-            //     updateFromEditBox();
-            //     m_editBoxChanged = false;
-            // }
+            if (m_editBoxChanged) {
+                updateFromEditBox();
+                m_editBoxChanged = false;
+            }
             
             // Now handle the scrolling
             if (ev.button == ButtonPressed::WheelUp) {
@@ -1398,9 +1396,7 @@ public:
     size_t getCursorX() const { return m_cursorX; }
     size_t getCursorY() const { return m_cursorY; }
     
-    void setCursorPos(size_t x, size_t y, bool ensureCurVisible = true) {
-        if (x == m_cursorX && y == m_cursorY) return;
-
+    void setCursorPos(size_t x, size_t y) {
         if (m_cursorY != y) {
             updateFromEditBox();
             m_editBoxChanged = false;
@@ -1430,15 +1426,11 @@ public:
             clearSelection();
         }
         
-        if (ensureCurVisible) ensureCursorVisible();
-        
+        ensureCursorVisible();
         updateCursorInfo();
 
     }
     
-    void setWheelScrollLines(int lines) { m_numLinesWheelScroll = lines; }
-    int getWheelScrollLines() const { return m_numLinesWheelScroll; }
-
     int getTabSize() const { return m_tabSize; }
     void setTabSize(int tabSize) { m_tabSize = tabSize; }
     

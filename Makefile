@@ -9,8 +9,9 @@ BINDIR = bin
 
 # Source files and target
 SRCS = $(SRCDIR)/main.cpp $(SRCDIR)/controls.cpp
-TARGET = $(BINDIR)/x
-TARGET_RELEASE = $(BINDIR)/x_release
+HEADERS = $(wildcard $(SRCDIR)/*.hpp)
+TARGET = $(BINDIR)/x_debug
+TARGET_RELEASE = $(BINDIR)/x
 
 # Create directories if they don't exist
 $(shell mkdir -p $(BINDIR))
@@ -27,11 +28,11 @@ release: CXXFLAGS = $(CXXFLAGS_RELEASE)
 release: $(TARGET_RELEASE)
 
 # Build the debug target
-$(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) $^ -o $@
+$(TARGET): $(SRCS) $(HEADERS)
+	$(CXX) $(CXXFLAGS_DEBUG) $^ -o $@
 
 # Build the release target
-$(TARGET_RELEASE): $(SRCS)
+$(TARGET_RELEASE): $(SRCS) $(HEADERS)
 	$(CXX) $(CXXFLAGS_RELEASE) $^ -o $@
 
 # Clean up
